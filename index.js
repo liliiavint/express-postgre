@@ -90,18 +90,22 @@ app.post('/user', async (req, res) => {
       const userFromResult = await client.query('SELECT id FROM users WHERE name ILIKE $1', [userFrom]);
       const userToResult = await client.query('SELECT id FROM users WHERE name ILIKE $1', [userTo]);
   
-      const userFromId = userFromResult.rows[0]?.id;
-      const userToId = userToResult.rows[0]?.id;
+      const userFromId = userFromResult.rows[0].id;
+      const userToId = userToResult.rows[0].id;
+      const userFromName = userFromResult.rows[0].name;
+      const userToName = userToResult.rows[0].name;
       console.log('User ID:', userToId);
       if (!userFromId || !userToId) {
         return res.status(404).json({ message: 'Sender or recipient not found' });
       }
-  
-      const result = await client.query('INSERT INTO transactions (amount, user_from, user_to) VALUES ($1, $2, $3) RETURNING *', [
+                                                                                                                                                                  
+      const result = await client.query('INSERT INTO transactions (amount, from_id, from_name, to_id, to_name) VALUES ($1, $2, $3, $4, $5) RETURNING *', [
         amount,
         userFromId,
+        userFromName,
         userToId,
-      ]);
+        userToName
+]);
       
       await client.query('COMMIT'); 
       res.status(201).json({ message: 'Transaction created successfully' });
