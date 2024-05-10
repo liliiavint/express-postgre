@@ -15,7 +15,7 @@ export default pool;
 
 const app = express();
 const port = 3000;
-// Parse incoming JSON data
+
 app.use(json());
 
 app.get('/', (req, res) => {
@@ -26,7 +26,6 @@ const userSchema = {
     name: { type: String, required: true },
   };
 
-  // Transaction Schema (for validation)
 const transactionSchema = {
     amount: { type: Number, required: true },
     userFrom: { type: String, required: true },
@@ -53,7 +52,6 @@ const transactionSchema = {
     return errors;
   }
   
-
 app.post('/user', async (req, res) => {
 
     const userData = req.body;
@@ -74,7 +72,6 @@ app.post('/user', async (req, res) => {
       res.status(500).json({ message: 'Error creating user' });
     }
   });
-
     
   app.post('/transactions', async (req, res) => {
     let client; 
