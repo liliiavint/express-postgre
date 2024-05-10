@@ -94,8 +94,8 @@ app.post('/user', async (req, res) => {
         await client.query('BEGIN'); // Start transaction
 
         // Check if userFrom and userTo exist
-        const userFromResult = await client.query('SELECT * FROM users WHERE name = $1', [transactionData.userfrom]);
-        const userToResult = await client.query('SELECT * FROM users WHERE name = $1', [transactionData.userto]);
+        const userFromResult = await client.query('SELECT * FROM users WHERE id = $1', [transactionData.id]);
+        const userToResult = await client.query('SELECT * FROM users WHERE id = $1', [transactionData.id]);
 
         if (userFromResult.rows.length === 0 || userToResult.rows.length === 0) {
             await client.query('ROLLBACK');
