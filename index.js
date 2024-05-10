@@ -1,4 +1,5 @@
-import express, { json } from 'express';
+import express from 'express';
+import { json } from 'express';
 import pkg from 'pg';
 
 const { Pool } = pkg;
@@ -28,11 +29,10 @@ const userSchema = {
   // Transaction Schema (for validation)
 const transactionSchema = {
     amount: { type: Number, required: true },
-    userfrom: { type: String, required: true },
-    userto: { type: String, required: true },
+    userFrom: { type: String, required: true },
+    userTo: { type: String, required: true },
   };
   
-  // Function to validate user data against schema
   function validateUser(userData) {
     const errors = {};
     Object.keys(userSchema).forEach((field) => {
@@ -42,8 +42,7 @@ const transactionSchema = {
     });
     return errors;
   }
-  
-  // Function to validate transaction data against schema
+
   function validateTransaction(transactionData) {
     const errors = {};
     Object.keys(transactionSchema).forEach((field) => {
@@ -55,9 +54,8 @@ const transactionSchema = {
   }
   
 
-// Create a new user (POST /users)
 app.post('/user', async (req, res) => {
-   console.log(req.body); 
+
     const userData = req.body;
     const validationErrors = validateUser(userData);
   
@@ -77,58 +75,50 @@ app.post('/user', async (req, res) => {
     }
   });
 
-  // Create a new transaction (POST /transactions)carsRouter.post('/create', async (req, res) => {
     
   app.post('/transactions', async (req, res) => {
-    const transactionData = req.body;
-    const validationErrors = validateTransaction(transactionData);
-  
-    if (Object.keys(validationErrors).length > 0) {
-        return res.status(400).json({ message: 'Validation errors', errors: validationErrors });
-    }
-  
-    let client;
-
+    let client; 
+    
     try {
-        client = await pool.connect();
-        await client.query('BEGIN'); // Start transaction
-
-        // Check if userFrom and userTo exist
-        const userFromResult = await client.query('SELECT * FROM users WHERE id = $1', [transactionData.id]);
-        const userToResult = await client.query('SELECT * FROM users WHERE id = $1', [transactionData.id]);
-
-        if (userFromResult.rows.length === 0 || userToResult.rows.length === 0) {
-            await client.query('ROLLBACK');
-            return res.status(400).json({ message: 'User(sine) do not exist' });
-        }
-
-        const result = await client.query('INSERT INTO transactions (amount, userfrom, userto) VALUES ($1, $2, $3) RETURNING *', [
-            transactionData.amount,
-            userFromResult.rows[0].name,
-            userToResult.rows[0].name,
-        ]);
-        const newTransaction = result.rows[0];
-
-        await client.query('COMMIT'); // Commit transaction
-        res.status(201).json(newTransaction);
-    } catch (err) {
-        console.error('Error creating transaction:', err);
-        // Roll back the transaction if one was started
-        if (client) {
-            try {
-                await client.query('ROLLBACK');
-            } catch (rollbackError) {
-                console.error('Error rolling back transaction:', rollbackError);
-            }
-        }
-        res.status(500).json({ message: 'Error creating transaction' });
+      client = await pool.connect(); 
+      const { amount, userFrom, userTo } = req.body;
+      const validationErrors = validateTransaction(req.body);
+    
+      if (Object.keys(validationErrors).length > 0) {
+        return res.status(400).json({ message: 'Validation errors', errors: validationErrors });
+      }
+  
+      await client.query('BEGIN'); 
+  
+      const userFromResult = await client.query('SELECT id FROM users WHERE name ILIKE $1', [userFrom]);
+      const userToResult = await client.query('SELECT id FROM users WHERE name ILIKE $1', [userTo]);
+  
+      const userFromId = userFromResult.rows[0]?.id;
+      const userToId = userToResult.rows[0]?.id;
+      console.log('User ID:', userToId);
+      if (!userFromId || !userToId) {
+        return res.status(404).json({ message: 'Sender or recipient not found' });
+      }
+  
+      const result = await client.query('INSERT INTO transactions (amount, user_from, user_to) VALUES ($1, $2, $3) RETURNING *', [
+        amount,
+        userFromId,
+        userToId,
+      ]);
+      
+      await client.query('COMMIT'); 
+      res.status(201).json({ message: 'Transaction created successfully' });
+    } catch (error) {
+      console.error(error);
+      await client.query('ROLLBACK');
+      res.status(500).json({ message: 'Internal Server Error' });
     } finally {
-        if (client) { // Release the connection even on error
-            client.release();
-        }
+      if (client) {
+        client.release();
+      }
     }
-});
-// Get all transactions (GET /transactions)
+  });
+
 app.get('/transactions', async (req, res) => {
   try {
     const client = await pool.connect();
