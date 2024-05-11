@@ -84,29 +84,26 @@ app.post('/user', async (req, res) => {
       if (Object.keys(validationErrors).length > 0) {
         return res.status(400).json({ message: 'Validation errors', errors: validationErrors });
       }
-  
-      await client.query('BEGIN'); 
-  
-      const userFromResult = await client.query('SELECT id FROM users WHERE name ILIKE $1', [userFrom]);
-      const userToResult = await client.query('SELECT id FROM users WHERE name ILIKE $1', [userTo]);
-  
-      const userFromId = userFromResult.rows[0].id;
-      const userToId = userToResult.rows[0].id;
-      const userFromName = userFromResult.rows[0].name;
-      const userToName = userToResult.rows[0].name;
-      console.log('User ID:', userToId);
-      if (!userFromId || !userToId) {
-        return res.status(404).json({ message: 'Sender or recipient not found' });
-      }
-                                                                                                                                                                  
-      const result = await client.query('INSERT INTO transactions (amount, from_id, from_name, to_id, to_name) VALUES ($1, $2, $3, $4, $5) RETURNING *', [
-        amount,
-        userFromId,
-        userFromName,
-        userToId,
-        userToName
-]);
-      
+     await client.query('BEGIN'); 
+     const userFromResult = await client.query('SELECT id, name FROM users WHERE name ILIKE $1', [userFrom]);
+     const userToResult = await client.query('SELECT id, name FROM users WHERE name ILIKE $1', [userTo]);
+
+     const userFromId = userFromResult.rows[0]?.id;
+     const userFromName = userFromResult.rows[0]?.name;
+     const userToId = userToResult.rows[0]?.id;
+     const userToName = userToResult.rows[0]?.name;
+     
+     if (!userFromId || !userToId) {
+       return res.status(404).json({ message: 'Sender or recipient not found' });
+     }
+
+     await client.query('INSERT INTO transactions (amount, from_id, from_name, to_id, to_name) VALUES ($1, $2, $3, $4, $5) RETURNING *', [
+      amount,
+      userFromId,
+      userFromName,
+      userToId,
+      userToName
+      ]);
       await client.query('COMMIT'); 
       res.status(201).json({ message: 'Transaction created successfully' });
     } catch (error) {
@@ -133,6 +130,35 @@ app.get('/transactions', async (req, res) => {
   }
 });
 
+app.delete('/transactions/:transactionId', async (req, res) => {
+  let client = null;
+
+  try {
+    client = await pool.connect();
+    const transactionId = req.params.transactionId; 
+    await client.query('BEGIN');
+
+    const deleteTransactionQuery = 'DELETE FROM transactions WHERE transaction_id = $1 RETURNING *';
+    const { rows: deletedTransaction } = await client.query(deleteTransactionQuery, [transactionId]);
+
+    if (deletedTransaction.length === 0) { 
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Transaction not found' });
+    }
+
+    await client.query('COMMIT');
+    res.status(200).json({ message: 'Transaction deleted successfully', transaction: deletedTransaction });
+  } catch (error) {
+    console.error(error);
+    await client.query('ROLLBACK');
+    client.end();
+    res.status(500).json({ message: 'Internal Server Error' });
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+});
 app.listen(port, () => {
   console.log(`URL: http://localhost:${port}`);
 });
