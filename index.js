@@ -89,7 +89,7 @@ app.post('/user', async (req, res) => {
      const userToResult = await client.query('SELECT id, name FROM users WHERE name ILIKE $1', [userTo]);
 
      const userFromId = userFromResult.rows[0]?.id;
-     const userFromName = userFromResult.rows[0]?.name;
+     const userFromName = userFromResult.rows[0]?.name; 
      const userToId = userToResult.rows[0]?.id;
      const userToName = userToResult.rows[0]?.name;
      
