@@ -2,16 +2,20 @@
   "name": "express-postgre",
   "version": "1.0.0",
   "description": "",
-  "type": "module",
-  "main": "index.js",
   "scripts": {
     "dev": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "author": "Lilia (https://github.com/liliiavint)",
   "license": "ISC",
   "dependencies": {
     "express": "^4.19.2",
     "pg": "^8.11.5"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "mock": "^0.1.1",
+    "nock": "^13.5.4",
+    "supertest": "^7.0.0"
   }
 }
